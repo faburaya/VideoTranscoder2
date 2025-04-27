@@ -1,44 +1,72 @@
 using Windows.Storage;
-using Windows.Storage.Pickers;
 
-namespace VideoTranscoder2
+namespace VideoTranscoder2;
+
+public partial class MainForm : Form
 {
-    public partial class MainForm : Form
+    private StorageFile? InputFile { get; set; }
+
+    private StorageFile? OutputFile { get; set; }
+
+    public MainForm()
     {
-        private static readonly string[] AllowedSourceFileExtensions = [".avi", ".wmv", ".m4a", ".mp4"];
+        InitializeComponent();
+    }
 
-        private readonly FileOpenPicker _inputFilePicker;
-
-        private StorageFile? InputFile { get; set; }
-
-        private StorageFile? OutputFile { get; set; }
-
-        public MainForm()
+    private void EnableStartIfPossible()
+    {
+        if (InputFile != null && OutputFile != null)
         {
-            InitializeComponent();
-
-            _inputFilePicker = new();
-
-            foreach (var fileExtension in AllowedSourceFileExtensions)
-            {
-                _inputFilePicker.FileTypeFilter.Add(fileExtension);
-            }
+            buttonToStartStop.Text = "Transcode to HEVC (H.265)";
+            buttonToStartStop.Enabled = true;
         }
+    }
 
-        private void EnableStartIfPossible()
-        {
-            if (InputFile != null && OutputFile != null)
+    private async void OnClickButtonForInput(object sender, EventArgs e)
+    {
+        using OpenFileDialog openFileDialog =
+            new()
             {
-                buttonToStartStop.Text = "Transcode to HEVC (H.265)";
-                buttonToStartStop.Enabled = true;
-            }
-        }
+                Title = "Select an input video file"
+            };
 
-        private async void OnClickButtonForInput(object sender, EventArgs e)
+        if (openFileDialog.ShowDialog(this) == DialogResult.OK)
         {
-            InputFile = await _inputFilePicker.PickSingleFileAsync();
+            InputFile = await StorageFile.GetFileFromPathAsync(openFileDialog.FileName);
             textBoxForInput.Text = InputFile.Path;
             EnableStartIfPossible();
         }
+    }
+
+    private async void OnClickButtonForOutput(object sender, EventArgs e)
+    {
+        using SaveFileDialog saveFileDialog =
+            new()
+            {
+                Title = "Select an output video file",
+                AddExtension = true,
+                DefaultExt = "HEVC.mp4",
+                CheckFileExists = false,
+                CheckWriteAccess = true,
+                OverwritePrompt = true,
+                SupportMultiDottedExtensions = true,
+            };
+
+        if (saveFileDialog.ShowDialog(this) == DialogResult.OK)
+        {
+            if (!File.Exists(saveFileDialog.FileName))
+            {
+                File.Create(saveFileDialog.FileName).Close();
+            }
+            OutputFile = await StorageFile.GetFileFromPathAsync(saveFileDialog.FileName);
+            textBoxForOutput.Text = OutputFile.Path;
+            EnableStartIfPossible();
+        }
+    }
+
+    private async void OnClickButtonToStartStop(object sender, EventArgs e)
+    {
+        using CancellationTokenSource cancellationTokenSource = new();
+
     }
 }

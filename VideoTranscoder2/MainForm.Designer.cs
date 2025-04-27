@@ -61,13 +61,14 @@
             // toolStripProgressBar
             // 
             toolStripProgressBar.Name = "toolStripProgressBar";
-            toolStripProgressBar.Size = new Size(550, 18);
+            toolStripProgressBar.Size = new Size(650, 18);
+            toolStripProgressBar.Step = 1;
             // 
             // toolStripStatusLabel
             // 
             toolStripStatusLabel.Name = "toolStripStatusLabel";
-            toolStripStatusLabel.Size = new Size(204, 20);
-            toolStripStatusLabel.Text = "Please choose the media files";
+            toolStripStatusLabel.Size = new Size(34, 20);
+            toolStripStatusLabel.Text = "Idle";
             // 
             // splitContainerMain
             // 
@@ -145,6 +146,7 @@
             buttonForOutput.TabIndex = 2;
             buttonForOutput.Text = "Choose output";
             buttonForOutput.UseVisualStyleBackColor = true;
+            buttonForOutput.Click += OnClickButtonForOutput;
             // 
             // textBoxForOutput
             // 
@@ -164,8 +166,9 @@
             buttonToStartStop.Name = "buttonToStartStop";
             buttonToStartStop.Size = new Size(782, 32);
             buttonToStartStop.TabIndex = 0;
-            buttonToStartStop.Text = "Transcode to HEVC (H.265)";
+            buttonToStartStop.Text = "Please first choose the media files";
             buttonToStartStop.UseVisualStyleBackColor = true;
+            buttonToStartStop.Click += OnClickButtonToStartStop;
             // 
             // MainForm
             // 
