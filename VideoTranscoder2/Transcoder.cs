@@ -1,6 +1,8 @@
 ﻿using Windows.Storage;
 using Windows.Media.MediaProperties;
 using Windows.Media.Transcoding;
+using Windows.Foundation;
+using System.Diagnostics;
 
 namespace VideoTranscoder2;
 
@@ -11,7 +13,8 @@ internal class Transcoder(Action<double> onTranscodeProgress)
         IStorageFile destinationFile,
         CancellationToken cancellationToken = default)
     {
-        var profile = MediaEncodingProfile.CreateHevc(VideoEncodingQuality.Auto);
+        var profile = MediaEncodingProfile
+            .CreateHevc(VideoEncodingQuality.HD720p);
 
         MediaTranscoder transcoder = new()
         {
@@ -32,22 +35,17 @@ internal class Transcoder(Action<double> onTranscodeProgress)
             prepareOp
                 .TranscodeAsync()
                 .AsTask(cancellationToken,
-                    new Progress<double>(onTranscodeProgress));
+                    new Progress<double>(
+                        progress => onTranscodeProgress(progress)));
 
-        await transcoding;
-
-        return transcoding.Status switch
+        try
         {
-            TaskStatus.RanToCompletion => true,
-            TaskStatus.Canceled => false,
-            TaskStatus.Faulted =>
-                throw transcoding.Exception ??
-                    new AggregateException(
-                        new InvalidOperationException(
-                            "Transcoding failed but exception is not available.")),
-
-            _ => throw new NotImplementedException(
-                $"Transcoding status '{transcoding.Status}' was not expected!")
-        };
+            await transcoding;
+            return true;
+        }
+        catch (TaskCanceledException)
+        {
+            return false;
+        }
     }
 }

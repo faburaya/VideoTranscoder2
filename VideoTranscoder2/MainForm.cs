@@ -1,3 +1,6 @@
+using System;
+using System.Threading;
+
 using Windows.Storage;
 
 namespace VideoTranscoder2;
@@ -45,6 +48,13 @@ public partial class MainForm : Form
             buttonToStartStop.Text = LabelForTranscodeAction;
             buttonToStartStop.Enabled = true;
         }
+    }
+
+    private void ReEnableInput()
+    {
+        buttonForInput.Enabled = true;
+        buttonForOutput.Enabled = true;
+        buttonToStartStop.Text = LabelForTranscodeAction;
     }
 
     private async void OnClickButtonForInput(object sender, EventArgs e)
@@ -97,30 +107,55 @@ public partial class MainForm : Form
             {
                 await StopTranscodingAsync();
                 IsTranscoding = false;
+                ReEnableInput();
             }
             else
             {
+                buttonToStartStop.Text = "Stop transcoding";
+                buttonForInput.Enabled = false;
+                buttonForOutput.Enabled = false;
                 IsTranscoding = true;
-                await StartTranscodingAsync();
+
+                _ = StartTranscodingAsync()
+                    .ContinueWith(async transcoding =>
+                    {
+
+                        var (completed, elapsedTime) = await transcoding;
+                        toolStripProgressBar.Value = 0;
+                        toolStripStatusLabel.Text = completed
+                            ? $"Completed in {elapsedTime}"
+                            : $"Stopped after {elapsedTime}";
+
+                        IsTranscoding = false;
+                        ReEnableInput();
+                    });
             }
         }
         catch (Exception ex)
         {
-            toolStripStatusLabel.Text = "Failed";
+            await StopTranscodingAsync();
+            IsTranscoding = false;
             buttonToStartStop.Enabled = false;
+            toolStripStatusLabel.Text = "Failed";
 
             MessageBox.Show(this,
                 ex.ToString(),
                 "Caught exception!",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Error);
+
+            ReEnableInput();
         }
     }
 
-    private async Task StartTranscodingAsync()
+    private async Task StopTranscodingAsync()
     {
-        buttonToStartStop.Text = "Stop transcoding";
+        await _cancellationTokenSource.CancelAsync();
+        _cancellationTokenSource = new();
+    }
 
+    private async Task<(bool completed, TimeSpan elapsedTime)> StartTranscodingAsync()
+    {
         var startTime = DateTime.Now;
 
         Transcoder transcoder =
@@ -137,17 +172,6 @@ public partial class MainForm : Form
                 OutputFile ?? throw new InvalidOperationException("No output has been chosen!"),
                 _cancellationTokenSource.Token);
 
-        TimeSpan elapsedTime = DateTime.Now - startTime;
-
-        toolStripStatusLabel.Text = completed
-            ? $"Finished transcoding in {elapsedTime}"
-            : "Stopped";
-    }
-
-
-    private async Task StopTranscodingAsync()
-    {
-        await _cancellationTokenSource.CancelAsync();
-        buttonToStartStop.Text = LabelForTranscodeAction;
+        return (completed, DateTime.Now - startTime);
     }
 }
