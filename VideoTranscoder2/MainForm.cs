@@ -1,6 +1,8 @@
 using System;
 using System.Threading;
 
+using VideoTranscoder2.Utils;
+
 using Windows.Media.MediaProperties;
 using Windows.Storage;
 
@@ -8,28 +10,11 @@ namespace VideoTranscoder2;
 
 public partial class MainForm : Form
 {
-    private int _transcodingOpsFlag;
-
-    private bool IsTranscoding
-    {
-        get => Interlocked.CompareExchange(ref _transcodingOpsFlag, 0, 0) == 1;
-
-        set
-        {
-            if (value)
-            {
-                Interlocked.CompareExchange(ref _transcodingOpsFlag, 1, 0);
-            }
-            else
-            {
-                Interlocked.CompareExchange(ref _transcodingOpsFlag, 0, 1);
-            }
-        }
-    }
-
     private const string LabelForTranscodeAction = "Transcode to HEVC (H.265)";
 
-    private CancellationTokenSource _cancellationTokenSource;
+    private CancellationTokenSource _cancellationTokenSource = new();
+
+    private AtomicBoolean IsTranscoding { get; } = new();
 
     private StorageFile? InputFile { get; set; }
 
@@ -38,8 +23,6 @@ public partial class MainForm : Form
     public MainForm()
     {
         InitializeComponent();
-
-        _cancellationTokenSource = new();
 
         foreach (var value in Enum.GetValues<VideoEncodingQuality>().Skip(1))
         {
@@ -98,9 +81,15 @@ public partial class MainForm : Form
 
         if (saveFileDialog.ShowDialog(this) == DialogResult.OK)
         {
-            if (!File.Exists(saveFileDialog.FileName))
+            if (File.Exists(saveFileDialog.FileName))
             {
-                File.Create(saveFileDialog.FileName).Close();
+                // truncate file:
+                File.Open(saveFileDialog.FileName, FileMode.Truncate, FileAccess.Write).Close();
+            }
+            else
+            {
+                // create file:
+                File.OpenWrite(saveFileDialog.FileName).Close();
             }
             OutputFile = await StorageFile.GetFileFromPathAsync(saveFileDialog.FileName);
             textBoxForOutput.Text = OutputFile.Path;
@@ -113,7 +102,7 @@ public partial class MainForm : Form
         if (IsTranscoding)
         {
             await StopTranscodingAsync();
-            IsTranscoding = false;
+            IsTranscoding.Set(false);
             ReEnableInput();
             return;
         }
@@ -121,7 +110,7 @@ public partial class MainForm : Form
         buttonToStartStop.Text = "Stop transcoding";
         buttonForInput.Enabled = false;
         buttonForOutput.Enabled = false;
-        IsTranscoding = true;
+        IsTranscoding.Set(true);
 
         try
         {
@@ -129,12 +118,15 @@ public partial class MainForm : Form
             var quality = (VideoEncodingQuality?)comboBoxForAlgo.SelectedItem
                 ?? throw new InvalidOperationException("Cannot get quality set in control!");
 
-            var (completed, elapsedTime) =
+            var transcoding =
                 await StartTranscodingAsync(quality, useFastestAlgorithm);
 
+            TimeSpan elapsedTime = transcoding.elapsedTime.RoundSeconds();
+            string assessment = transcoding.outSizeRatio < 1.0 ? "good" : "bad";
+
             toolStripProgressBar.Value = 0;
-            toolStripStatusLabel.Text = completed
-                ? $"Completed in {elapsedTime}"
+            toolStripStatusLabel.Text = transcoding.completed
+                ? $"Completed in {elapsedTime} - OSR = {transcoding.outSizeRatio:F2} ({assessment})"
                 : $"Stopped after {elapsedTime}";
         }
         catch (Exception ex)
@@ -142,10 +134,10 @@ public partial class MainForm : Form
             await StopTranscodingAsync();
             buttonToStartStop.Enabled = false;
             toolStripStatusLabel.Text = "Failed";
-            DisplayErrorMessageBox(ex);
+            this.DisplayMessageBox(ex);
         }
 
-        IsTranscoding = false;
+        IsTranscoding.Set(false);
         ReEnableInput();
     }
 
@@ -155,7 +147,7 @@ public partial class MainForm : Form
         _cancellationTokenSource = new();
     }
 
-    private async Task<(bool completed, TimeSpan elapsedTime)>
+    private async Task<(bool completed, TimeSpan elapsedTime, double outSizeRatio)>
         StartTranscodingAsync(VideoEncodingQuality quality, bool useFastestAlgorithm)
     {
         var startTime = DateTime.Now;
@@ -164,8 +156,9 @@ public partial class MainForm : Form
             new(progress =>
             {
                 TimeSpan elapsedTime = DateTime.Now - startTime;
-                toolStripStatusLabel.Text = $"{progress:F1}% in {elapsedTime}";
                 toolStripProgressBar.Value = (int)progress;
+                toolStripStatusLabel.Text =
+                    $"Transcoding... {progress:F1}% in {elapsedTime.RoundSeconds()}";
             });
 
         bool completed =
@@ -176,20 +169,15 @@ public partial class MainForm : Form
                 useFastestAlgorithm,
                 _cancellationTokenSource.Token);
 
-        return (completed, DateTime.Now - startTime);
+        return (
+            completed,
+            DateTime.Now - startTime,
+            Helpers.CalculateOutputSizeRatio(InputFile.Path, OutputFile.Path)
+        );
     }
 
     private void OnSelectedIndexChangedComboBoxForAlgo(object sender, EventArgs e)
     {
         EnableStartIfPossible();
-    }
-
-    private void DisplayErrorMessageBox(Exception ex)
-    {
-        MessageBox.Show(this,
-            ex.ToString(),
-            "Caught exception!",
-            MessageBoxButtons.OK,
-            MessageBoxIcon.Error);
     }
 }

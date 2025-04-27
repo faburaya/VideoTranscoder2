@@ -1,8 +1,6 @@
 ﻿using Windows.Storage;
 using Windows.Media.MediaProperties;
 using Windows.Media.Transcoding;
-using Windows.Foundation;
-using System.Diagnostics;
 
 namespace VideoTranscoder2;
 
