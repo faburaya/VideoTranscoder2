@@ -1,4 +1,6 @@
-﻿using Windows.Storage;
+﻿using System.Windows.Forms;
+
+using Windows.Storage;
 
 namespace VideoTranscoder2.Utils;
 
@@ -18,11 +20,17 @@ internal static class Helpers
         return TimeSpan.FromSeconds(Math.Floor(duration.TotalSeconds));
     }
 
-    public static double CalculateOutputSizeRatio(
-        string inputFilePath, string outputFilePath)
+    public static IStorageFile Truncate(this IStorageFile file)
     {
-        using FileStream inputStream = File.Open(inputFilePath, FileMode.Open, FileAccess.Read);
-        using FileStream outputStream = File.Open(outputFilePath, FileMode.Open, FileAccess.Read);
+        File.Open(file.Path, FileMode.Truncate, FileAccess.Write).Close();
+        return file;
+    }
+
+    public static double CalculateOutputSizeRatio(
+        IStorageFile inputFile, IStorageFile outputFile)
+    {
+        using FileStream inputStream = File.Open(inputFile.Path, FileMode.Open, FileAccess.Read);
+        using FileStream outputStream = File.Open(outputFile.Path, FileMode.Open, FileAccess.Read);
         return (double)outputStream.Length / inputStream.Length;
     }
 }

@@ -19,8 +19,8 @@ internal class Transcoder(Action<double> onTranscodeProgress)
         {
             HardwareAccelerationEnabled = true,
             VideoProcessingAlgorithm = useFastestAlgorithm
-                ? MediaVideoProcessingAlgorithm.MrfCrf444
-                : MediaVideoProcessingAlgorithm.Default
+                ? MediaVideoProcessingAlgorithm.Default
+                : MediaVideoProcessingAlgorithm.MrfCrf444
         };
 
         PrepareTranscodeResult prepareOp =
@@ -29,8 +29,14 @@ internal class Transcoder(Action<double> onTranscodeProgress)
 
         if (!prepareOp.CanTranscode)
         {
-            throw new InvalidOperationException(
-                $"Cannot transcode: {prepareOp.FailureReason}");
+            string reason =
+                prepareOp.FailureReason switch
+                {
+                    TranscodeFailureReason.Unknown => "WinRT API cannot handle provided settings",
+                    _ => prepareOp.FailureReason.ToString(),
+                };
+
+            throw new InvalidOperationException($"Cannot transcode: {reason}");
         }
 
         Task transcoding =

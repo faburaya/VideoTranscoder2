@@ -40,7 +40,7 @@
             textBoxForOutput = new TextBox();
             tableLayoutPanelBottom = new TableLayoutPanel();
             checkBoxForAlgo = new CheckBox();
-            comboBoxForAlgo = new ComboBox();
+            comboBoxForQuality = new ComboBox();
             buttonToStartStop = new Button();
             statusStrip.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)splitContainerMain).BeginInit();
@@ -168,7 +168,7 @@
             tableLayoutPanelBottom.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 30F));
             tableLayoutPanelBottom.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 40F));
             tableLayoutPanelBottom.Controls.Add(checkBoxForAlgo, 0, 0);
-            tableLayoutPanelBottom.Controls.Add(comboBoxForAlgo, 1, 0);
+            tableLayoutPanelBottom.Controls.Add(comboBoxForQuality, 1, 0);
             tableLayoutPanelBottom.Controls.Add(buttonToStartStop, 2, 0);
             tableLayoutPanelBottom.Dock = DockStyle.Fill;
             tableLayoutPanelBottom.Location = new Point(0, 0);
@@ -189,15 +189,15 @@
             checkBoxForAlgo.Text = "Favor speed over quality";
             checkBoxForAlgo.UseVisualStyleBackColor = true;
             // 
-            // comboBoxForAlgo
+            // comboBoxForQuality
             // 
-            comboBoxForAlgo.Dock = DockStyle.Fill;
-            comboBoxForAlgo.FormattingEnabled = true;
-            comboBoxForAlgo.Location = new Point(237, 3);
-            comboBoxForAlgo.Name = "comboBoxForAlgo";
-            comboBoxForAlgo.Size = new Size(228, 28);
-            comboBoxForAlgo.TabIndex = 1;
-            comboBoxForAlgo.SelectedIndexChanged += OnSelectedIndexChangedComboBoxForAlgo;
+            comboBoxForQuality.Dock = DockStyle.Fill;
+            comboBoxForQuality.FormattingEnabled = true;
+            comboBoxForQuality.Location = new Point(237, 3);
+            comboBoxForQuality.Name = "comboBoxForQuality";
+            comboBoxForQuality.Size = new Size(228, 28);
+            comboBoxForQuality.TabIndex = 1;
+            comboBoxForQuality.SelectedIndexChanged += OnSelectedIndexChangedComboBoxForAlgo;
             // 
             // buttonToStartStop
             // 
@@ -252,7 +252,7 @@
         private ToolStripStatusLabel toolStripStatusLabel;
         private TableLayoutPanel tableLayoutPanelBottom;
         private CheckBox checkBoxForAlgo;
-        private ComboBox comboBoxForAlgo;
+        private ComboBox comboBoxForQuality;
         private Button buttonToStartStop;
     }
 }
