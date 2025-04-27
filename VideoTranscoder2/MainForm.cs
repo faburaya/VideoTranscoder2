@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 
+using Windows.Media.MediaProperties;
 using Windows.Storage;
 
 namespace VideoTranscoder2;
@@ -39,11 +40,19 @@ public partial class MainForm : Form
         InitializeComponent();
 
         _cancellationTokenSource = new();
+
+        foreach (var value in Enum.GetValues<VideoEncodingQuality>().Skip(1))
+        {
+            comboBoxForAlgo.Items.Add(value);
+        }
+        comboBoxForAlgo.SelectedIndex = 0;
     }
 
     private void EnableStartIfPossible()
     {
-        if (InputFile != null && OutputFile != null)
+        if (InputFile != null &&
+            OutputFile != null &&
+            comboBoxForAlgo.SelectedIndex >= 0)
         {
             buttonToStartStop.Text = LabelForTranscodeAction;
             buttonToStartStop.Enabled = true;
@@ -101,51 +110,43 @@ public partial class MainForm : Form
 
     private async void OnClickButtonToStartStop(object sender, EventArgs e)
     {
+        if (IsTranscoding)
+        {
+            await StopTranscodingAsync();
+            IsTranscoding = false;
+            ReEnableInput();
+            return;
+        }
+
+        buttonToStartStop.Text = "Stop transcoding";
+        buttonForInput.Enabled = false;
+        buttonForOutput.Enabled = false;
+        IsTranscoding = true;
+
         try
         {
-            if (IsTranscoding)
-            {
-                await StopTranscodingAsync();
-                IsTranscoding = false;
-                ReEnableInput();
-            }
-            else
-            {
-                buttonToStartStop.Text = "Stop transcoding";
-                buttonForInput.Enabled = false;
-                buttonForOutput.Enabled = false;
-                IsTranscoding = true;
+            bool useFastestAlgorithm = checkBoxForAlgo.Checked;
+            var quality = (VideoEncodingQuality?)comboBoxForAlgo.SelectedItem
+                ?? throw new InvalidOperationException("Cannot get quality set in control!");
 
-                _ = StartTranscodingAsync()
-                    .ContinueWith(async transcoding =>
-                    {
+            var (completed, elapsedTime) =
+                await StartTranscodingAsync(quality, useFastestAlgorithm);
 
-                        var (completed, elapsedTime) = await transcoding;
-                        toolStripProgressBar.Value = 0;
-                        toolStripStatusLabel.Text = completed
-                            ? $"Completed in {elapsedTime}"
-                            : $"Stopped after {elapsedTime}";
-
-                        IsTranscoding = false;
-                        ReEnableInput();
-                    });
-            }
+            toolStripProgressBar.Value = 0;
+            toolStripStatusLabel.Text = completed
+                ? $"Completed in {elapsedTime}"
+                : $"Stopped after {elapsedTime}";
         }
         catch (Exception ex)
         {
             await StopTranscodingAsync();
-            IsTranscoding = false;
             buttonToStartStop.Enabled = false;
             toolStripStatusLabel.Text = "Failed";
-
-            MessageBox.Show(this,
-                ex.ToString(),
-                "Caught exception!",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Error);
-
-            ReEnableInput();
+            DisplayErrorMessageBox(ex);
         }
+
+        IsTranscoding = false;
+        ReEnableInput();
     }
 
     private async Task StopTranscodingAsync()
@@ -154,7 +155,8 @@ public partial class MainForm : Form
         _cancellationTokenSource = new();
     }
 
-    private async Task<(bool completed, TimeSpan elapsedTime)> StartTranscodingAsync()
+    private async Task<(bool completed, TimeSpan elapsedTime)>
+        StartTranscodingAsync(VideoEncodingQuality quality, bool useFastestAlgorithm)
     {
         var startTime = DateTime.Now;
 
@@ -170,8 +172,24 @@ public partial class MainForm : Form
             await transcoder.TranscodeAsync(
                 InputFile ?? throw new InvalidOperationException("No input has been chosen!"),
                 OutputFile ?? throw new InvalidOperationException("No output has been chosen!"),
+                quality,
+                useFastestAlgorithm,
                 _cancellationTokenSource.Token);
 
         return (completed, DateTime.Now - startTime);
+    }
+
+    private void OnSelectedIndexChangedComboBoxForAlgo(object sender, EventArgs e)
+    {
+        EnableStartIfPossible();
+    }
+
+    private void DisplayErrorMessageBox(Exception ex)
+    {
+        MessageBox.Show(this,
+            ex.ToString(),
+            "Caught exception!",
+            MessageBoxButtons.OK,
+            MessageBoxIcon.Error);
     }
 }

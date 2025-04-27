@@ -11,14 +11,18 @@ internal class Transcoder(Action<double> onTranscodeProgress)
     public async Task<bool> TranscodeAsync(
         IStorageFile sourceFile,
         IStorageFile destinationFile,
+        VideoEncodingQuality quality,
+        bool useFastestAlgorithm,
         CancellationToken cancellationToken = default)
     {
-        var profile = MediaEncodingProfile
-            .CreateHevc(VideoEncodingQuality.HD720p);
+        var profile = MediaEncodingProfile.CreateHevc(quality);
 
         MediaTranscoder transcoder = new()
         {
-            HardwareAccelerationEnabled = true
+            HardwareAccelerationEnabled = true,
+            VideoProcessingAlgorithm = useFastestAlgorithm
+                ? MediaVideoProcessingAlgorithm.MrfCrf444
+                : MediaVideoProcessingAlgorithm.Default
         };
 
         PrepareTranscodeResult prepareOp =
