@@ -9,11 +9,18 @@ internal class Transcoder(Action<double> onTranscodeProgress)
     public async Task<bool> TranscodeAsync(
         IStorageFile sourceFile,
         IStorageFile destinationFile,
+        Codec encoder,
         VideoEncodingQuality quality,
         bool useFastestAlgorithm,
         CancellationToken cancellationToken = default)
     {
-        var profile = MediaEncodingProfile.CreateHevc(quality);
+        var profile = encoder switch
+        {
+            Codec.HEVC => MediaEncodingProfile.CreateHevc(quality),
+            Codec.AV1 => MediaEncodingProfile.CreateAv1(quality),
+            Codec.H264 => MediaEncodingProfile.CreateMp4(quality),
+            _ => throw new NotImplementedException($"Transcoder does not support {encoder}")
+        };
 
         MediaTranscoder transcoder = new()
         {

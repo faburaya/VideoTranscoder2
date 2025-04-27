@@ -42,6 +42,7 @@
             checkBoxForAlgo = new CheckBox();
             comboBoxForQuality = new ComboBox();
             buttonToStartStop = new Button();
+            comboBoxForCodecs = new ComboBox();
             statusStrip.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)splitContainerMain).BeginInit();
             splitContainerMain.Panel1.SuspendLayout();
@@ -163,13 +164,15 @@
             // 
             // tableLayoutPanelBottom
             // 
-            tableLayoutPanelBottom.ColumnCount = 3;
+            tableLayoutPanelBottom.ColumnCount = 4;
             tableLayoutPanelBottom.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 30F));
+            tableLayoutPanelBottom.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 20F));
+            tableLayoutPanelBottom.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 20F));
             tableLayoutPanelBottom.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 30F));
-            tableLayoutPanelBottom.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 40F));
             tableLayoutPanelBottom.Controls.Add(checkBoxForAlgo, 0, 0);
-            tableLayoutPanelBottom.Controls.Add(comboBoxForQuality, 1, 0);
-            tableLayoutPanelBottom.Controls.Add(buttonToStartStop, 2, 0);
+            tableLayoutPanelBottom.Controls.Add(comboBoxForQuality, 2, 0);
+            tableLayoutPanelBottom.Controls.Add(buttonToStartStop, 3, 0);
+            tableLayoutPanelBottom.Controls.Add(comboBoxForCodecs, 1, 0);
             tableLayoutPanelBottom.Dock = DockStyle.Fill;
             tableLayoutPanelBottom.Location = new Point(0, 0);
             tableLayoutPanelBottom.Name = "tableLayoutPanelBottom";
@@ -193,9 +196,9 @@
             // 
             comboBoxForQuality.Dock = DockStyle.Fill;
             comboBoxForQuality.FormattingEnabled = true;
-            comboBoxForQuality.Location = new Point(237, 3);
+            comboBoxForQuality.Location = new Point(393, 3);
             comboBoxForQuality.Name = "comboBoxForQuality";
-            comboBoxForQuality.Size = new Size(228, 28);
+            comboBoxForQuality.Size = new Size(150, 28);
             comboBoxForQuality.TabIndex = 1;
             comboBoxForQuality.SelectedIndexChanged += OnSelectedIndexChangedComboBoxForAlgo;
             // 
@@ -203,13 +206,22 @@
             // 
             buttonToStartStop.Dock = DockStyle.Fill;
             buttonToStartStop.Enabled = false;
-            buttonToStartStop.Location = new Point(471, 3);
+            buttonToStartStop.Location = new Point(549, 3);
             buttonToStartStop.Name = "buttonToStartStop";
-            buttonToStartStop.Size = new Size(308, 28);
+            buttonToStartStop.Size = new Size(230, 28);
             buttonToStartStop.TabIndex = 2;
             buttonToStartStop.Text = "Please choose first the files";
             buttonToStartStop.UseVisualStyleBackColor = true;
             buttonToStartStop.Click += OnClickButtonToStartStop;
+            // 
+            // comboBoxForCodecs
+            // 
+            comboBoxForCodecs.FormattingEnabled = true;
+            comboBoxForCodecs.Location = new Point(237, 3);
+            comboBoxForCodecs.Name = "comboBoxForCodecs";
+            comboBoxForCodecs.Size = new Size(150, 28);
+            comboBoxForCodecs.TabIndex = 3;
+            comboBoxForCodecs.SelectedIndexChanged += OnSelectedIndexChangedcomboBoxForCodecs;
             // 
             // MainForm
             // 
@@ -254,5 +266,6 @@
         private CheckBox checkBoxForAlgo;
         private ComboBox comboBoxForQuality;
         private Button buttonToStartStop;
+        private ComboBox comboBoxForCodecs;
     }
 }

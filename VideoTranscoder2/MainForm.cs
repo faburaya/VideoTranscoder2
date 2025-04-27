@@ -1,16 +1,14 @@
-﻿using System;
-using System.Threading;
-
-using VideoTranscoder2.Utils;
-
+﻿
 using Windows.Media.MediaProperties;
 using Windows.Storage;
+
+using VideoTranscoder2.Utils;
 
 namespace VideoTranscoder2;
 
 public partial class MainForm : Form
 {
-    private const string LabelForTranscodeAction = "Transcode to HEVC (H.265)";
+    private const string LabelForTranscodeAction = "Transcode";
 
     private CancellationTokenSource _cancellationTokenSource = new();
 
@@ -23,6 +21,12 @@ public partial class MainForm : Form
     public MainForm()
     {
         InitializeComponent();
+
+        foreach (var value in Enum.GetValues<Codec>())
+        {
+            comboBoxForCodecs.Items.Add(value);
+        }
+        comboBoxForCodecs.SelectedIndex = 0;
 
         foreach (var value in
             Enum.GetValues<VideoEncodingQuality>()
@@ -37,6 +41,7 @@ public partial class MainForm : Form
     {
         if (InputFile != null &&
             OutputFile != null &&
+            comboBoxForCodecs.SelectedIndex >= 0 &&
             comboBoxForQuality.SelectedIndex >= 0)
         {
             buttonToStartStop.Text = LabelForTranscodeAction;
@@ -49,6 +54,7 @@ public partial class MainForm : Form
         buttonForInput.Enabled = false;
         buttonForOutput.Enabled = false;
         checkBoxForAlgo.Enabled = false;
+        comboBoxForCodecs.Enabled = false;
         comboBoxForQuality.Enabled = false;
     }
 
@@ -57,6 +63,7 @@ public partial class MainForm : Form
         buttonForInput.Enabled = true;
         buttonForOutput.Enabled = true;
         checkBoxForAlgo.Enabled = true;
+        comboBoxForCodecs.Enabled = true;
         comboBoxForQuality.Enabled = true;
         buttonToStartStop.Text = LabelForTranscodeAction;
     }
@@ -84,7 +91,7 @@ public partial class MainForm : Form
             {
                 Title = "Select an output video file",
                 AddExtension = true,
-                DefaultExt = "HEVC.mp4",
+                DefaultExt = "transcoded.mp4",
                 CheckFileExists = false,
                 CheckWriteAccess = true,
                 OverwritePrompt = true,
@@ -114,25 +121,30 @@ public partial class MainForm : Form
             return;
         }
 
-        buttonToStartStop.Text = "Stop transcoding";
+        buttonToStartStop.Text = "Stop";
         DisableControls();
         IsTranscoding.Set(true);
 
         try
         {
             bool useFastestAlgorithm = checkBoxForAlgo.Checked;
+
+            var codec = (Codec?)comboBoxForCodecs.SelectedItem
+                ?? throw new InvalidOperationException("Cannot get codec set in control!");
+
             var quality = (VideoEncodingQuality?)comboBoxForQuality.SelectedItem
                 ?? throw new InvalidOperationException("Cannot get quality set in control!");
 
             var transcoding =
-                await StartTranscodingAsync(quality, useFastestAlgorithm);
+                await StartTranscodingAsync(
+                    codec, quality, useFastestAlgorithm);
 
             TimeSpan elapsedTime = transcoding.elapsedTime.RoundSeconds();
             string assessment = transcoding.outSizeRatio < 1.0 ? "👍" : "👎";
 
             toolStripProgressBar.Value = 0;
             toolStripStatusLabel.Text = transcoding.completed
-                ? $"Completed in {elapsedTime} - OSR = {transcoding.outSizeRatio:F2} {assessment}"
+                ? $"Completed in {elapsedTime} / OSR = {transcoding.outSizeRatio:F2} {assessment}"
                 : $"Stopped after {elapsedTime}";
         }
         catch (Exception ex)
@@ -154,7 +166,10 @@ public partial class MainForm : Form
     }
 
     private async Task<(bool completed, TimeSpan elapsedTime, double outSizeRatio)>
-        StartTranscodingAsync(VideoEncodingQuality quality, bool useFastestAlgorithm)
+        StartTranscodingAsync(
+            Codec encoder,
+            VideoEncodingQuality quality,
+            bool useFastestAlgorithm)
     {
         var startTime = DateTime.Now;
 
@@ -173,6 +188,7 @@ public partial class MainForm : Form
                     ?? throw new InvalidOperationException("No input has been chosen!"),
                 OutputFile?.Truncate()
                     ?? throw new InvalidOperationException("No output has been chosen!"),
+                encoder,
                 quality,
                 useFastestAlgorithm,
                 _cancellationTokenSource.Token);
@@ -185,6 +201,11 @@ public partial class MainForm : Form
     }
 
     private void OnSelectedIndexChangedComboBoxForAlgo(object sender, EventArgs e)
+    {
+        EnableStartIfPossible();
+    }
+
+    private void OnSelectedIndexChangedcomboBoxForCodecs(object sender, EventArgs e)
     {
         EnableStartIfPossible();
     }
