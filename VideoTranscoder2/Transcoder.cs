@@ -7,11 +7,12 @@ namespace VideoTranscoder2;
 internal class Transcoder(Action<double> onTranscodeProgress)
 {
     public async Task<bool> TranscodeAsync(
-        MediaEncodingProfile profile,
         IStorageFile sourceFile,
         IStorageFile destinationFile,
         CancellationToken cancellationToken = default)
     {
+        var profile = MediaEncodingProfile.CreateHevc(VideoEncodingQuality.Auto);
+
         MediaTranscoder transcoder = new()
         {
             HardwareAccelerationEnabled = true

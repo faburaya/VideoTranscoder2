@@ -4,6 +4,29 @@ namespace VideoTranscoder2;
 
 public partial class MainForm : Form
 {
+    private int _transcodingOpsFlag;
+
+    private bool IsTranscoding
+    {
+        get => Interlocked.CompareExchange(ref _transcodingOpsFlag, 0, 0) == 1;
+
+        set
+        {
+            if (value)
+            {
+                Interlocked.CompareExchange(ref _transcodingOpsFlag, 1, 0);
+            }
+            else
+            {
+                Interlocked.CompareExchange(ref _transcodingOpsFlag, 0, 1);
+            }
+        }
+    }
+
+    private const string LabelForTranscodeAction = "Transcode to HEVC (H.265)";
+
+    private CancellationTokenSource _cancellationTokenSource;
+
     private StorageFile? InputFile { get; set; }
 
     private StorageFile? OutputFile { get; set; }
@@ -11,13 +34,15 @@ public partial class MainForm : Form
     public MainForm()
     {
         InitializeComponent();
+
+        _cancellationTokenSource = new();
     }
 
     private void EnableStartIfPossible()
     {
         if (InputFile != null && OutputFile != null)
         {
-            buttonToStartStop.Text = "Transcode to HEVC (H.265)";
+            buttonToStartStop.Text = LabelForTranscodeAction;
             buttonToStartStop.Enabled = true;
         }
     }
@@ -66,7 +91,63 @@ public partial class MainForm : Form
 
     private async void OnClickButtonToStartStop(object sender, EventArgs e)
     {
-        using CancellationTokenSource cancellationTokenSource = new();
+        try
+        {
+            if (IsTranscoding)
+            {
+                await StopTranscodingAsync();
+                IsTranscoding = false;
+            }
+            else
+            {
+                IsTranscoding = true;
+                await StartTranscodingAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            toolStripStatusLabel.Text = "Failed";
+            buttonToStartStop.Enabled = false;
 
+            MessageBox.Show(this,
+                ex.ToString(),
+                "Caught exception!",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
+        }
+    }
+
+    private async Task StartTranscodingAsync()
+    {
+        buttonToStartStop.Text = "Stop transcoding";
+
+        var startTime = DateTime.Now;
+
+        Transcoder transcoder =
+            new(progress =>
+            {
+                TimeSpan elapsedTime = DateTime.Now - startTime;
+                toolStripStatusLabel.Text = $"{progress:F1}% in {elapsedTime}";
+                toolStripProgressBar.Value = (int)progress;
+            });
+
+        bool completed =
+            await transcoder.TranscodeAsync(
+                InputFile ?? throw new InvalidOperationException("No input has been chosen!"),
+                OutputFile ?? throw new InvalidOperationException("No output has been chosen!"),
+                _cancellationTokenSource.Token);
+
+        TimeSpan elapsedTime = DateTime.Now - startTime;
+
+        toolStripStatusLabel.Text = completed
+            ? $"Finished transcoding in {elapsedTime}"
+            : "Stopped";
+    }
+
+
+    private async Task StopTranscodingAsync()
+    {
+        await _cancellationTokenSource.CancelAsync();
+        buttonToStartStop.Text = LabelForTranscodeAction;
     }
 }
